@@ -19,30 +19,54 @@
 // SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 // USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-use std::env;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::fs;
+extern crate git2;
 
+use git2::{Cred, Oid, Repository};
+use std::env;
+use std::fs::create_dir_all;
+use std::io::Write;
+use std::path::Path;
+use std::process::Command;
 
 fn main() {
+    const RANDOMX_COMMIT: &str = "5bfd021e8f976c4ab91bd0e933c889688e6a969c";
+
     let out_dir = env::var("OUT_DIR").unwrap();
     let project_dir = Path::new(&out_dir);
-    let cargo_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    let repo_dir = PathBuf::from(env::var("RANDOMX_DIR").unwrap_or_else(|_| format!("{}/RandomX", &cargo_dir)));
-    let build_dir = &project_dir.join("randomx_build");
+    let repo_dir = project_dir.join("randomx");
+
+    if !repo_dir.exists() {
+        create_dir_all(&repo_dir.to_str().unwrap()).unwrap();
+
+        // If we're inside CircleCI, use SSH (Circle requires this), otherwise good ol' https will do just fine
+        let repo = match env::var("CIRCLECI") {
+            Ok(v) if &v == "true" => build_using_ssh(&repo_dir),
+            _ => build_using_https(&repo_dir),
+        };
+
+        let oid = Oid::from_str(RANDOMX_COMMIT).unwrap();
+        let commit = repo.find_commit(oid).unwrap();
+
+        let _branch = repo.branch(RANDOMX_COMMIT, &commit, false);
+
+        let obj = repo
+            .revparse_single(&("refs/heads/".to_owned() + RANDOMX_COMMIT))
+            .unwrap();
+
+        repo.checkout_tree(&obj, None).unwrap();
+
+        repo.set_head(&("refs/heads/".to_owned() + RANDOMX_COMMIT))
+            .unwrap();
+    }
 
     env::set_current_dir(Path::new(&repo_dir)).unwrap(); //change current path to repo for dependency build
-    let _ = fs::create_dir(&build_dir);  // path might exist
-    env::set_current_dir(build_dir).unwrap();               
     let target = env::var("TARGET").unwrap();
     if target.contains("windows") {
         let c = Command::new("cmake")
             .arg("-G")
             .arg("Visual Studio 16 2019")
-            .arg(repo_dir.to_str().unwrap())
+            .arg(".")
             .output()
             .expect("failed to execute CMake");
         println!("status: {}", c.status);
@@ -63,7 +87,11 @@ fn main() {
         assert!(m.status.success());
     } else {
         let c = Command::new("cmake")
-            .arg(repo_dir.to_str().unwrap())
+            .arg(".")
+            //.arg("-G")
+            //.arg("Xcode")
+            .arg("-DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake")
+            .arg("-DPLATFORM=SIMULATORARM64")
             .output()
             .expect("failed to execute CMake");
         println!("status: {}", c.status);
@@ -82,7 +110,7 @@ fn main() {
     env::set_current_dir(Path::new(&project_dir)).unwrap(); //change path back to main project
 
     if target.contains("windows") {
-        let include = &build_dir.join("Release");
+        let include = &repo_dir.join("Release");
         println!(
             "cargo:rustc-link-search=native={}",
             &include.to_str().unwrap()
@@ -91,10 +119,9 @@ fn main() {
     } else {
         println!(
             "cargo:rustc-link-search=native={}",
-            &build_dir.to_str().unwrap()
-
+            &repo_dir.to_str().unwrap()
         );
-        println!("cargo:rustc-link-lib=static=randomx");
+        println!("cargo:rustc-link-lib=randomx");
     } //link to RandomX
 
     if target.contains("apple") {
@@ -105,5 +132,32 @@ fn main() {
         //println!("cargo:rustc-link-lib=dylib=c++");
     } else {
         unimplemented!();
+    }
+}
+
+fn build_using_ssh(path: &Path) -> Repository {
+    let url = "ssh://git@github.com/tevador/RandomX.git";
+    // Build up auth credentials via fetch options:
+    let mut cb = git2::RemoteCallbacks::new();
+    cb.credentials(|_, _, _| {
+        let credentials = Cred::ssh_key_from_agent("git").expect("Could not get SSH key");
+        Ok(credentials)
+    });
+    let mut fo = git2::FetchOptions::new();
+    fo.remote_callbacks(cb);
+
+    let mut builder = git2::build::RepoBuilder::new();
+    builder.fetch_options(fo);
+    match builder.clone(url, &path) {
+        Ok(repo) => repo,
+        Err(e) => panic!("Failed to clone RandomX: {}", e),
+    }
+}
+
+fn build_using_https(path: &Path) -> Repository {
+    let url = "https://github.com/tevador/RandomX.git";
+    match Repository::clone(url, &path) {
+        Ok(repo) => repo,
+        Err(e) => panic!("Failed to clone RandomX: {}", e),
     }
 }
