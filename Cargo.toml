@@ -16,7 +16,7 @@ build="build.rs"
 crate-type = ["cdylib","lib"]
 
 [dependencies]
-libc = "0.2.62"
+libc = "0.2"
 bitflags = "1.2.1"
 thiserror = "1.0"
 bigint = "4.4.1"

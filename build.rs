@@ -29,7 +29,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    const RANDOMX_COMMIT: &str = "5bfd021e8f976c4ab91bd0e933c889688e6a969c";
+    const RANDOMX_COMMIT: &str = "df6e15e1303034831dc14128d654c157ddc0dce3";
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let project_dir = Path::new(&out_dir);
@@ -62,6 +62,7 @@ fn main() {
 
     env::set_current_dir(Path::new(&repo_dir)).unwrap(); //change current path to repo for dependency build
     let target = env::var("TARGET").unwrap();
+
     if target.contains("windows") {
         let c = Command::new("cmake")
             .arg("-G")
@@ -79,6 +80,22 @@ fn main() {
             .arg(".")
             .arg("--config")
             .arg("Release")
+            .output()
+            .expect("failed to execute Make");
+        println!("status: {}", m.status);
+        std::io::stdout().write_all(&m.stdout).unwrap();
+        std::io::stderr().write_all(&m.stderr).unwrap();
+        assert!(m.status.success());
+    } else if target.contains("linux") {
+        let c = Command::new("cmake")
+            .arg(repo_dir.to_str().unwrap())
+            .output()
+            .expect("failed to execute CMake");
+        println!("status: {}", c.status);
+        std::io::stdout().write_all(&c.stdout).unwrap();
+        std::io::stderr().write_all(&c.stderr).unwrap();
+        assert!(c.status.success());
+        let m = Command::new("make")
             .output()
             .expect("failed to execute Make");
         println!("status: {}", m.status);
@@ -104,7 +121,6 @@ fn main() {
             .expect("failed to execute CMake");
         println!("status: {}", c.status);
 
-        print!("###################### {:?}", std::env::current_dir());
         std::io::stdout().write_all(&c.stdout).unwrap();
         std::io::stderr().write_all(&c.stderr).unwrap();
         assert!(c.status.success());
