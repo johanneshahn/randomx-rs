@@ -86,15 +86,26 @@ fn main() {
         std::io::stderr().write_all(&m.stderr).unwrap();
         assert!(m.status.success());
     } else {
+
+        let cpath = env::var("CARGO_MANIFEST_DIR").unwrap();
+        let cpath_dir = Path::new(&cpath);
+        //let cpath = std::env::current_dir().expect("failed to get current dir for CMake");
+        //let path_string = cpath.as_os_str().to_str().unwrap().to_string();
         let c = Command::new("cmake")
             .arg(".")
             //.arg("-G")
             //.arg("Xcode")
-            .arg("-DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake")
+            .arg(
+                "-DCMAKE_TOOLCHAIN_FILE=".to_string()
+                    + &cpath_dir.as_os_str().to_str().unwrap().to_string()
+                    + &"/ios.toolchain.cmake".to_string(),
+            )
             .arg("-DPLATFORM=SIMULATORARM64")
             .output()
             .expect("failed to execute CMake");
         println!("status: {}", c.status);
+
+        print!("###################### {:?}", std::env::current_dir());
         std::io::stdout().write_all(&c.stdout).unwrap();
         std::io::stderr().write_all(&c.stderr).unwrap();
         assert!(c.status.success());
