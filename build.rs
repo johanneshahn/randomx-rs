@@ -86,7 +86,6 @@ fn main() {
         std::io::stderr().write_all(&m.stderr).unwrap();
         assert!(m.status.success());
     } else {
-
         let cpath = env::var("CARGO_MANIFEST_DIR").unwrap();
         let cpath_dir = Path::new(&cpath);
         //let cpath = std::env::current_dir().expect("failed to get current dir for CMake");

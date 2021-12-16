@@ -1,5 +1,5 @@
 [package]
-name = "randomx-rs"
+name = "randomx"
 description = "Rust bindings for the RandomX Proof-of-Work"
 authors = ["The Tari Development Community"]
 repository = "https://github.com/tari-project/randomx-rs"
