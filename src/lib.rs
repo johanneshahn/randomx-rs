@@ -669,9 +669,11 @@ impl RxState {
                 let d = dataset.0.as_ptr();
                 let c = cache.0.as_ptr();
                 unsafe {
-                    randomx_init_dataset(d, c, start.into(), count.into());
+
                     #[cfg(target_arch = "arm")]
                     randomx_init_dataset(d, c, start as u32, count as u32);
+                    #[cfg(not(target_arch = "arm"))]
+                    randomx_init_dataset(d, c, start.into(), count.into());
                 }
             }));
             start += count;
