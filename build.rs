@@ -62,35 +62,58 @@ fn main() {
         std::io::stdout().write_all(&m.stdout).unwrap();
         std::io::stderr().write_all(&m.stderr).unwrap();
         assert!(m.status.success());
-    } else if target.contains("apple") {
-        let cpath = env::var("CARGO_MANIFEST_DIR").unwrap();
-        let cpath_dir = Path::new(&cpath);
-        //let cpath = std::env::current_dir().expect("failed to get current dir for CMake");
-        //let path_string = cpath.as_os_str().to_str().unwrap().to_string();
-        let c = Command::new("cmake")
-            .arg(repo_dir.to_str().unwrap())
-            //.arg("-G")
-            //.arg("Xcode")
-            .arg(
-                "-DCMAKE_TOOLCHAIN_FILE=".to_string()
-                    + &cpath_dir.as_os_str().to_str().unwrap().to_string()
-                    + &"/ios.toolchain.cmake".to_string(),
-            )
-            .arg("-DPLATFORM=SIMULATORARM64")
-            .output()
-            .expect("failed to execute CMake");
-        println!("status: {}", c.status);
+    /* TODO set this only for IOS SIMULATOR */
+    /*} else if target.contains("apple") {
+    let cpath = env::var("CARGO_MANIFEST_DIR").unwrap();
 
-        std::io::stdout().write_all(&c.stdout).unwrap();
-        std::io::stderr().write_all(&c.stderr).unwrap();
-        assert!(c.status.success());
-        let m = Command::new("make")
-            .output()
-            .expect("failed to execute Make");
-        println!("status: {}", m.status);
-        std::io::stdout().write_all(&m.stdout).unwrap();
-        std::io::stderr().write_all(&m.stderr).unwrap();
-        assert!(m.status.success());
+    let cpath_dir = Path::new(&cpath);
+    println!("######################cpath_dir: {:?}", cpath_dir);
+    //let cpath = std::env::current_dir().expect("failed to get current dir for CMake");
+    //let path_string = cpath.as_os_str().to_str().unwrap().to_string();
+    let c = Command::new("cmake")
+        .arg(repo_dir.to_str().unwrap())
+        //.arg("-G")
+        //.arg("Xcode")
+        .arg(
+            "-DCMAKE_TOOLCHAIN_FILE=".to_string()
+                + &cpath_dir.as_os_str().to_str().unwrap().to_string()
+                + &"/ios.toolchain.cmake".to_string(),
+        )
+        /*
+        Supported PLATFORM values:
+        * OS
+        * OS64
+        * OS64COMBINED
+        * SIMULATOR
+        * SIMULATOR64
+        * SIMULATORARM64
+        * TVOS
+        * TVOSCOMBINED
+        * SIMULATOR_TVOS
+        * WATCHOS
+        * WATCHOSCOMBINED
+        * SIMULATOR_WATCHOS
+        * MAC
+        * MAC_ARM64
+        * MAC_CATALYST
+        * MAC_CATALYST_ARM64
+        */
+        //.arg("-DPLATFORM=SIMULATORARM64")
+        .arg("-DPLATFORM=MAC")
+        .output()
+        .expect("failed to execute CMake");
+    println!("status: {}", c.status);
+
+    std::io::stdout().write_all(&c.stdout).unwrap();
+    std::io::stderr().write_all(&c.stderr).unwrap();
+    assert!(c.status.success());
+    let m = Command::new("make")
+        .output()
+        .expect("failed to execute Make");
+    println!("status: {}", m.status);
+    std::io::stdout().write_all(&m.stdout).unwrap();
+    std::io::stderr().write_all(&m.stderr).unwrap();
+    assert!(m.status.success());*/
     } else {
         let c = Command::new("cmake")
             .arg(repo_dir.to_str().unwrap())
